@@ -15,10 +15,10 @@ This software is provided with no warranty and does not intend to support the fu
 - Wiser Thermostat (RTS) EER51000
 - Wiser H-Relay (HACT) EER50000
 - Wiser Smartplug V2 EER40030
+- Wiser L-Relay EER42000
 - Wiser Radiator Thermostat (VACT) EER53000
 
 # Devices Currently Unsupported
-- Wiser L-Relay EER42000 (TBD)
 - Wiser Boiler Controller (need to RE join process)
 - Wiser S-Meter (possible, but I'm not doing it :-)
 

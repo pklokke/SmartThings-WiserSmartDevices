@@ -16,7 +16,7 @@
  */
 
 metadata {
-	definition (name: "Wiser Switch Power", namespace: "pklokke", author: "pklokke", ocfDeviceType: "oic.d.switch", runLocally: true, minHubCoreVersion: '000.019.00012', executeCommandsLocally: true, genericHandler: "Zigbee") {
+	definition (name: "Wiser Switch Power", namespace: "pklokke", author: "pklokke", ocfDeviceType: "oic.d.waterheater", runLocally: true, minHubCoreVersion: '000.019.00012', executeCommandsLocally: true, genericHandler: "Zigbee") {
 		capability "Actuator"
 		capability "Configuration"
 		capability "Refresh"
@@ -28,7 +28,7 @@ metadata {
 
         //Schneider Electric Wiser Smart
         fingerprint profileId: "0104", deviceId: "0009", manufacturer: "Schneider Electric", model: "EH-ZB-SPD-V2", deviceJoinName: "Wiser Smartplug", ocfDeviceType: "oic.d.smartplug" //Only works on channels 11,15,20,25
-        fingerprint profileId: "0104", deviceId: "0009", manufacturer: "Schneider Electric", model: "EH-ZB-LACT", deviceJoinName: "Wiser L-Relay"
+        fingerprint profileId: "0104", deviceId: "0009", manufacturer: "Schneider Electric", model: "EH-ZB-LMACT", deviceJoinName: "Wiser L-Relay"
 	}
 
 	tiles(scale: 2) {
