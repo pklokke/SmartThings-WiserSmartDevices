@@ -19,7 +19,7 @@ import physicalgraph.zigbee.zcl.DataType
 
 metadata
 {
-    definition(name: "Wiser Thermostat RTS", namespace: "pklokke", author: "pklokke", runLocally: true, executeCommandsLocally: false, mnmn: "SmartThings", vid: "generic-temperature-measurement", genericHandler: "Zigbee")
+    definition(name: "Wiser Thermostat RTS", namespace: "pklokke", author: "pklokke", mnmn: "SmartThings", vid: "generic-temperature-measurement", genericHandler: "Zigbee")
     {
         capability "Configuration"
         capability "Battery"
