@@ -16,7 +16,7 @@
  */
 
 metadata {
-    definition (name: "Wiser Switch Power", namespace: "pklokke", author: "pklokke", ocfDeviceType: "oic.d.waterheater", runLocally: true, minHubCoreVersion: '000.019.00012', executeCommandsLocally: true, genericHandler: "Zigbee")
+    definition (name: "Wiser Switch Power", namespace: "pklokke", author: "pklokke", ocfDeviceType: "oic.d.waterheater", genericHandler: "Zigbee")
     {
         capability "Actuator"
         capability "Configuration"
@@ -62,19 +62,9 @@ def parse(String description)
 {
     log.debug "description is $description"
     def event = zigbee.getEvent(description)
-    if (event) {
-        if (event.name == "power")
-        {
-            def powerValue
-            def div = device.getDataValue("divisor")
-            div = div ? (div as int) : 10
-            powerValue = (event.value as Integer)/div
-            sendEvent(name: "power", value: powerValue)
-        }
-        else
-        {
-            sendEvent(event)
-        }
+    if (event)
+    {
+        sendEvent(event)
     }
     else
     {
@@ -95,20 +85,19 @@ def on()
 
 def refresh()
 {
-    Integer reportIntervalMinutes = 5
-    def cmds = zigbee.onOffRefresh() + zigbee.simpleMeteringPowerRefresh() + zigbee.electricMeasurementPowerRefresh()
-    cmds + zigbee.onOffConfig(0, reportIntervalMinutes * 60) + zigbee.simpleMeteringPowerConfig() + zigbee.electricMeasurementPowerConfig()
+    return zigbee.onOffRefresh() + zigbee.simpleMeteringPowerRefresh()
 }
 
 def configure()
 {
     log.debug "in configure()"
-    def additionalCmds = []
+    def additionalCmds = zigbee.onOffConfig(0, 300) + zigbee.simpleMeteringPowerConfig()
+
     if (device.getDataValue("model") == "EH-ZB-SPD-V2") {
         //Set this to make the commissioning complete and persist on smartplug
-        additionalCmds += zigbee.writeAttribute(0x0000, 0xe050, 0x10, 0x01)
+        additionalCmds += zigbee.writeAttribute(zigbee.BASIC_CLUSTER, 0xe050, 0x10, 0x01)
     }
-    return configureHealthCheck() + additionalCmds
+    return additionalCmds + configureHealthCheck()
 }
 
 def configureHealthCheck()
@@ -130,3 +119,9 @@ def ping()
 {
     return zigbee.onOffRefresh()
 }
+
+def getONOFF_ATTRIBUTE()                {0x0000}
+
+def getMETERING_INSTANT_DEMAND()        {0x0400}
+def getMETERING_MULTIPLIER_ATTRIBUTE()  {0x5000}
+def getMETERING_DIVISOR_ATTRIBUTE()     {0x5001}
