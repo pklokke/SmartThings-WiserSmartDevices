@@ -27,61 +27,43 @@ definition(
     pausable: true
 )
 
-preferences {
-	section("Choose a temperature sensor/RTS... "){
-		input "sensor", "device.wiserThermostatRts", title: "Sensor"
-	}
-	section("Select the thermostat actuator... "){
-		input "actuator", "device.wiserHeatingActuators", title: "Thermostat Actuator"
-	}
+preferences
+{
+    section("Choose a Thermostat RTS... ")
+    {
+        input "sensor", "device.wiserThermostatRts", title: "Thermostat RTS"
+    }
+    section("Select the H-Relay... ")
+    {
+        input "actuator", "device.wiserHeatingActuators", title: "H-Relay"
+    }
 }
 
 def installed()
 {
-	state.existingSensor = [:]
-    state.existingActuator = [:]
-	subscribe(sensor, "temperature", temperatureReading)
-    log.debug "Installed: sensor $sensor actuator: $actuator"
-    state.updateBind = true
-    sensor.bind(actuator.device.zigbeeId,actuator.device.endpointId)
+    subscribe(sensor, "temperature", temperatureReading)
+    if( actuator && sensor)
+    {
+        log.debug "Installed: sensor $sensor actuator: $actuator"
+        sensor.bind(actuator.device.zigbeeId,actuator.device.endpointId)
+    }
 }
 
 def updated()
 {
-    log.debug "Updated: sensor $sensor actuator: $actuator"
-	state.updateBind = true
-    sensor.bind(actuator.device.zigbeeId,actuator.device.endpointId)
+    if( actuator && sensor)
+    {
+        log.debug "Updated: sensor $sensor actuator: $actuator"
+        sensor.bind(actuator.device.zigbeeId,actuator.device.endpointId)
+    }
 }
 
 def uninstalled()
 {
-	sensor.unbind(actuator.device.zigbeeId,actuator.device.endpointId)
+    sensor.unbind(actuator.device.zigbeeId,actuator.device.endpointId)
 }
 
 def temperatureReading(evt)
 {
-   log.debug "sensor temperature ${sensor.currentTemperature} actuator temperature: ${actuator.currentTemperature}"
-   log.debug "sensor IEEE ${sensor.device.zigbeeId} actuator IEEE: ${actuator.device.zigbeeId}"
-   log.debug "sensor network ID ${sensor.deviceNetworkId} actuator network ID: ${actuator.deviceNetworkId}"
-   log.debug "sensor network EP ${sensor.device.endpointId} actuator network EP: ${actuator.device.endpointId}"
-   log.debug "sensor model ${sensor.getModelName()} actuator model: ${actuator.getModelName()}"
-   
    actuator.setActualTemperature(sensor.currentTemperature)
-  
-   if( state.updateBind )
-   {
-   		if ( state.existingSensor != [:] )
-    	{
-        
-            evt.getDevice().unbind(state.existingActuator.zigbeeId,state.existingActuator.ep)
-
-            //subscribe to new temperature event to prepare to handle new bind
-            unsubscribe()
-            subscribe(sensor, "temperature", handleBind)
-            state.existingSensor = [zigbeeId: sensor.device.zigbeeId, ep: sensor.device.endpointId, nwkAddr: sensor.device.deviceNetworkId]
-            state.existingActuator = [zigbeeId: actuator.device.zigbeeId,ep: actuator.device.endpointId]
-   		}
-        state.updateBind = false
-   }
-   
 }
