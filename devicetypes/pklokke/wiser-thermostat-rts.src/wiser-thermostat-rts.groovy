@@ -34,6 +34,14 @@ metadata
         fingerprint profileId: "0104", deviceId: "0104", manufacturer: "Schneider Electric", model: "EH-ZB-RTS", deviceJoinName: "Thermostat RTS"
     }
 
+   preferences
+   {
+        section
+        {
+            input ("batteryType", "enum", title: "Battery Type", displayDuringSetup: true, options: ["NiMH": "NiMH", "Alkaline": "Alkaline"])
+        }
+    }
+
     tiles(scale: 2)
     {
         multiAttributeTile(name: "temperature", type: "generic", width: 6, height: 4)
@@ -93,7 +101,7 @@ def parse(String description)
             def battMap = descMaps.find { it.attrInt == BATTERY_VOLTAGE_ATTR }
             if (battMap)
             {
-                map = getBatteryResult(Integer.parseInt(battMap.value, 16))
+                map = getBatteryPercentage(Integer.parseInt(battMap.value, 16))
             }
         }
         else if (descMap?.clusterInt == zigbee.TEMPERATURE_MEASUREMENT_CLUSTER && descMap.commandInt == 0x07)
@@ -122,30 +130,38 @@ def parse(String description)
     return result
 }
 
-private Map getBatteryResult(rawValue)
+def getBatteryPercentage(rawValue)
 {
-    log.debug "Battery rawValue = ${rawValue}"
-    def linkText = getLinkText(device)
-
     def result = [:]
 
-    def volts = rawValue / 10
+    result.name = "battery"
 
-    if (!(rawValue == 0 || rawValue == 255)) {
-        result.name = 'battery'
-        result.translatable = true
-        result.descriptionText = "{{ device.displayName }} battery was {{ value }}%"
-        def minVolts = 2.7
-        def maxVolts = 4.5
-        def pct = (volts - minVolts) / (maxVolts - minVolts)
-        def roundedPct = Math.round(pct * 100)
-        if (roundedPct <= 0)
-        roundedPct = 1
-        result.value = Math.min(100, roundedPct)
+    def volts = rawValue / 10
+    def minVolts = voltageRange.minVolts
+    def maxVolts = voltageRange.maxVolts
+    def pct = (volts - minVolts) / (maxVolts - minVolts)
+    def roundedPct = Math.round(pct * 100)
+    if (roundedPct < 0)
+    {
+        roundedPct = 0
     }
+    result.value = Math.min(100, roundedPct)
 
     return result
 }
+
+def getVoltageRange()
+{
+    if(batteryType == null || batteryType == "Alkaline")
+    {
+        [minVolts: 2.7, maxVolts: 4.5]
+    }
+    else if (batteryType == "NiMH")
+    {
+        [minVolts: 3.1, maxVolts: 4.0]
+    }
+}
+
 
 /**
  * PING is used by Device-Watch in attempt to reach the Device
@@ -170,7 +186,7 @@ def configure()
 {
     // Device-Watch allows 2 check-in misses from device + ping (plus 1 min lag time)
     // enrolls with default periodic reporting until newer 5 min interval is confirmed
-    sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 1 * 60, displayed: false, data: [protocol: "zigbee", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
+    sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 1 * 60, displayed: false, data: [protocol: "zigbee", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 
     def bindingCmds = zigbee.addBinding(zigbee.POWER_CONFIGURATION_CLUSTER) + zigbee.addBinding(zigbee.TEMPERATURE_MEASUREMENT_CLUSTER) + zigbee.addBinding(zigbee.BASIC_CLUSTER)
 

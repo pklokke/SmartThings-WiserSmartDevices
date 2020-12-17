@@ -35,6 +35,7 @@ metadata
    {
         section
         {
+            input ("batteryType", "enum", title: "Battery Type", displayDuringSetup: true, options: ["NiMH": "NiMH", "Alkaline": "Alkaline"])
             input ("calibrateNow", "boolean", title: "Calibrate Now?", required: false)
             input ("calibrationDay", "enum", title: "Calibration Day of the Week", required: false, options: ["Monday": "Monday", "Tuesday": "Tuesday", "Wednesday": "Wednesday", "Thursday": "Thursday", "Thursday": "Thursday", "Saturday": "Saturday", "Sunday": "Sunday"])
             input ("calibrationTime", "string", title: "Calibration Time of Day", required: false)
@@ -256,7 +257,7 @@ private parseAttrMessage(description)
 
 def installed()
 {
-    sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zigbee", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
+    sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zigbee", hubHardwareId: device.hub.hardwareID, offlinePingable: "0"])
 
     state.supportedThermostatModes = ["heat"]
     state.pendingDispatch = false
@@ -350,7 +351,14 @@ def getBatteryPercentage(rawValue)
 
 def getVoltageRange()
 {
+    if(batteryType == null || batteryType == "Alkaline")
+    {
         [minVolts: 2.0, maxVolts: 3.2]
+    }
+    else if (batteryType == "NiMH")
+    {
+        [minVolts: 2.1, maxVolts: 2.8]
+    }
 }
 
 def getTemperature(value)
