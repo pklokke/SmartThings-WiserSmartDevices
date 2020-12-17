@@ -23,7 +23,6 @@ metadata {
         capability "Thermostat"
         capability "Thermostat Heating Setpoint"
         capability "Configuration"
-        capability "Battery"
         capability "Power Source"
         capability "Health Check"
         capability "Refresh"
@@ -88,12 +87,8 @@ metadata {
         {
             state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
         }
-        valueTile("battery", "device.battery", inactiveLabel: false, decoration: "flat", width: 2, height: 2)
-        {
-            state "battery", label:'${currentValue}% battery', unit:""
-        }
         main "thermostatMulti"
-        details(["thermostatMulti", "heatingSetpoint", "battery", "refresh"])
+        details(["thermostatMulti", "heatingSetpoint", "refresh"])
     }
 }
 
@@ -201,17 +196,6 @@ private parseAttrMessage(description)
                 map.unit = temperatureScale
            }
         }
-        else if (it.cluster == zigbee.POWER_CONFIGURATION_CLUSTER)
-        {
-            if (it.attribute == BATTERY_VOLTAGE)
-            {
-                map = getBatteryPercentage(Integer.parseInt(it.value, 16))
-            }
-            else if (it.attribute == BATTERY_ALARM_STATE)
-            {
-                map = getPowerSource(it.value)
-            }
-        }
 
         if (map)
         {
@@ -231,8 +215,7 @@ def installed()
     state.pendingDispatch = false
     state.exerciseCachedSetpoint = 20
 
-    def startValues = zigbee.readAttribute(THERMOSTAT_CLUSTER, LOCAL_TEMPERATURE) +
-                        zigbee.readAttribute(zigbee.POWER_CONFIGURATION_CLUSTER, BATTERY_ALARM_STATE)
+    def startValues = zigbee.readAttribute(THERMOSTAT_CLUSTER, LOCAL_TEMPERATURE)
 
     //These are needed to ensure that Google Home recognises it as a thermostat which is heating and can have its thermostat set
     sendEvent(name: "supportedThermostatModes", value: JsonOutput.toJson(state.supportedThermostatModes), displayed: false)
@@ -304,7 +287,6 @@ def configure()
     def binding = zigbee.addBinding(THERMOSTAT_CLUSTER)
     def configCmds = zigbee.configureReporting(THERMOSTAT_CLUSTER, HEATING_SETPOINT, DataType.INT16, 1, 300, 0x0031)
 
-    sendEvent(name: "battery", value: 100, descriptionText: "${device.displayName} is connected to mains")
     return binding + configCmds + refresh()
 }
 
@@ -324,22 +306,6 @@ def getTemperature(value)
             return Math.round(celsiusToFahrenheit(celsius))
         }
     }
-}
-
-def getPowerSource(value)
-{
-    def result = [name: "powerSource"]
-    switch (value) {
-        case "40000000":
-            result.value = "battery"
-            result.descriptionText = "${device.displayName} is powered by batteries"
-            break
-        default:
-            result.value = "mains"
-            result.descriptionText = "${device.displayName} is connected to mains"
-            break
-    }
-    return result
 }
 
 private setSetpoint(degrees, setpointAttr, degreesMin, degreesMax)
@@ -398,8 +364,3 @@ private getMAX_HEAT_SETPOINT_LIMIT() { 0x0016 }
 
 private getSETPOINT_RAISE_LOWER_CMD() { 0x00 }
 private getSET_SETPOINT_CMD() {0xE0 }
-
-private getPOWER_CONFIGURATION_CLUSTER() { 0x0001 }
-private getBATTERY_VOLTAGE() { 0x0020 }
-private getBATTERY_PERCENTAGE_REMAINING() { 0x0021 }
-private getBATTERY_ALARM_STATE() { 0x003E }
