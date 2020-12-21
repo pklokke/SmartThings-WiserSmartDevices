@@ -30,7 +30,7 @@ metadata
 
         fingerprint profileId: "0104", inClusters: "0000,0001,0003,0009,0201,0204,FE02", outClusters: "0019, 0201", manufacturer: "Schneider Electric", model: "EH-ZB-VACT", deviceJoinName: "Wiser Radiator Thermostat"
     }
-    
+
    preferences
    {
         section
@@ -39,6 +39,7 @@ metadata
             input ("calibrateNow", "boolean", title: "Calibrate Now?", required: false)
             input ("calibrationDay", "enum", title: "Calibration Day of the Week", required: false, options: ["Monday": "Monday", "Tuesday": "Tuesday", "Wednesday": "Wednesday", "Thursday": "Thursday", "Thursday": "Thursday", "Saturday": "Saturday", "Sunday": "Sunday"])
             input ("calibrationTime", "string", title: "Calibration Time of Day", required: false)
+            input ("temperatureOffset", "decimal", title: "Temperature Offset Calibration", required: false, description: "Adjustable in half degree steps", range: "-4..4")
         }
     }
 
@@ -122,8 +123,21 @@ def parse(String description)
         runIn(1, "sendCalibrateValveCmd", [overwrite: true])
         state.calibrateValve = false
     }
+    if (state.dispatchTemperatureOffset )
+    {
+        runIn(1, "sendTemperatureOffsetAdjust", [overwrite: true])
+        state.dispatchTemperatureOffset = false
+    }
 
     return result
+}
+
+def sendTemperatureOffsetAdjust()
+{
+    def hexValue = hex(state.lastTemperatureOffset*10)
+    log.debug "Adjusting Temperature Offset: ${state.lastTemperatureOffset} degrees, raw value: $hexValue"
+    def zigbeeCmd = zigbee.writeAttribute(THERMOSTAT_CLUSTER, LOCAL_TEMPERATURE_CALIBRATION, DataType.INT8, hex(state.lastTemperatureOffset*10))
+    sendZigbeeCmds(zigbeeCmd, 500)
 }
 
 def sendCalibrateValveCmd()
@@ -146,12 +160,12 @@ def updateSetpoints()
     zigbeeWriteInfo = zigbee.command(THERMOSTAT_CLUSTER, SET_SETPOINT_CMD, "00", "01", tempHex, "FF")
 
     /*zigbeeWriteInfo = zigbee.writeAttribute(THERMOSTAT_CLUSTER, THERMOSTAT_MODE, DataType.ENUM8, 0x04) +
-                            zigbee.writeAttribute(THERMOSTAT_CLUSTER, HEATING_SETPOINT, DataType.INT16, hex(state.pendingSetpoint * 100)) + 
+                            zigbee.writeAttribute(THERMOSTAT_CLUSTER, HEATING_SETPOINT, DataType.INT16, hex(state.pendingSetpoint * 100)) +
                             zigbee.readAttribute(THERMOSTAT_CLUSTER, HEATING_SETPOINT) */
 
-    log.debug "Attribute info is ${zigbeeWriteInfo}" 
+    log.debug "Attribute info is ${zigbeeWriteInfo}"
 
-    sendZigbeeCmds(zigbeeWriteInfo, 500)    
+    sendZigbeeCmds(zigbeeWriteInfo, 500)
 }
 
 private parseCmdMessage(description)
@@ -159,25 +173,25 @@ private parseCmdMessage(description)
     def descMap = zigbee.parseDescriptionAsMap(description)
     def result = []
     def map = [:]
-    
+
     if ( descMap.isClusterSpecific )
     {
         log.debug "Processing Command: Cluster 0x${descMap.clusterId}, CmdID 0x${descMap.command}, Data ${descMap.data}"
-        
+
         if (descMap.clusterInt == THERMOSTAT_CLUSTER)
         {
             if (descMap.commandInt == SET_SETPOINT_CMD)
             {
                 state.commandSetpoint = getTemperature(descMap.data[3] + descMap.data[2])
                 log.debug "Device Heating Setpoint Command: ${state.commandSetpoint} degrees"
-                
+
                 //Trigger Local UI update
                 map.name = "heatingSetpoint"
                 map.value = state.commandSetpoint
                 map.unit = temperatureScale
             }
-        } 
-        
+        }
+
         if (map)
         {
             result << createEvent(map)
@@ -280,7 +294,15 @@ def updated()
         device.updateSetting("calibrateNow", false)
         state.calibrateValve = true
     }
-    
+
+    log.debug "temperatureOffset: $temperatureOffset. lastTemperatureOffset: ${state.lastTemperatureOffset}"
+    if(temperatureOffset.toDouble().round(1) != state.lastTemperatureOffset)
+    {
+        log.debug "Temperature Offset Updated"
+        state.lastTemperatureOffset = temperatureOffset.toDouble().round(1)
+        state.dispatchTemperatureOffset = true
+    }
+
     log.debug "calibrationTime: $calibrationTime. calibrationDay: $calibrationDay"
     if ( calibrationTime && calibrationDay )
     {
@@ -437,6 +459,7 @@ def sendZigbeeCmds(cmds, delay = 2000)
 
 private getTHERMOSTAT_CLUSTER() { 0x0201 }
 private getLOCAL_TEMPERATURE() { 0x0000 }
+private getLOCAL_TEMPERATURE_CALIBRATION() {0x0010}
 private getHEATING_SETPOINT() { 0x0012 }
 private getMIN_HEAT_SETPOINT_LIMIT() { 0x0015 }
 private getMAX_HEAT_SETPOINT_LIMIT() { 0x0016 }
