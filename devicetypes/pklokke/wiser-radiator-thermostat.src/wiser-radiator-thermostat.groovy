@@ -226,6 +226,11 @@ private parseAttrMessage(description)
                 log.debug "TEMP"
                 map.name = "temperature"
                 map.value = getTemperature(it.value)
+                if(temperatureOffset != null)
+                {
+                    log.debug "applying temperature offset: $temperatureOffset"
+                    map.value = getTemperature(it.value) + temperatureOffset.toDouble().round(1)
+                }
                 map.unit = temperatureScale
             }
             else if (it.attribute == HEATING_SETPOINT)
