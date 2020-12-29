@@ -375,11 +375,11 @@ def getVoltageRange()
 {
     if(batteryType == null || batteryType == "Alkaline")
     {
-        [minVolts: 2.0, maxVolts: 3.2]
+        [minVolts: 2.2, maxVolts: 3.2]
     }
     else if (batteryType == "NiMH")
     {
-        [minVolts: 2.1, maxVolts: 2.8]
+        [minVolts: 2.2, maxVolts: 2.8]
     }
 }
 
