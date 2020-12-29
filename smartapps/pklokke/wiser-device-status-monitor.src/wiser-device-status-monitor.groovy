@@ -43,22 +43,22 @@ preferences {
 
 def installed()
 {
-    subscribe(rts+vact, "battery", battery)
-    subscribe(vact, "valveCalibrationStatus", batteryUpdate)
+    subscribe(rts+vact, "battery", batteryUpdate)
+    subscribe(vact, "valveCalibrationStatus", valveStatusUpdate)
     log.debug "Installed: rts: $rts vact: $vact"
 }
 
 def updated()
 {
     unsubscribe()
-    subscribe(rts+vact, "battery", battery)
+    subscribe(rts+vact, "battery", batteryUpdate)
     subscribe(vact, "valveCalibrationStatus", valveStatusUpdate)
     log.debug "Updated: rts: $rts vact: $vact"
 }
 
 def batteryUpdate(evt)
 {
-   if(evt.value < 20)
+   if(evt.value <= batteryPercent)
    {
        sendPush("${evt.getDevice().displayName} battery low: ${evt.value}%")
    }
